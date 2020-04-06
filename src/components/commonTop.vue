@@ -1,6 +1,7 @@
 <template>
+<div class="all">
   <div class="nav">
-      <span class="title">大厨到家</span>
+      <span class="title">风味到家</span>
       <ul>
         <li><a @click="toIndex">首页</a></li>
         <li><a @click="toAbout">关于我们</a></li>
@@ -25,26 +26,8 @@
           </el-dropdown>
         </li>
       </ul>
-      <p v-if="viewChief" class="car" @click="drawer=true">
-          <img src="../assets/car.png" alt="">
-          <span class="count">1</span>
-      </p>
-      <el-drawer
-        title="我是标题"
-        :visible.sync="drawer"
-        :with-header="false"
-        size="300px">
-        <div>
-          <p style="margin:20px">购物车</p>
-          <p class="edition">
-            <span>编辑</span>
-            <el-checkbox v-model="checked" disabled>备选项</el-checkbox>
-          </p>
-
-        </div>
-      </el-drawer>
-
      <login :visible="isLogin" @changeLogin="change" @logined="logined"></login>
+  </div>
   </div>
 </template>
 
@@ -58,18 +41,31 @@ export default {
     return {
       isLogin: false,
       notLogin: true,
-      personName: '个人中心',
-      viewChief: true,
-      drawer: false,
-      checked: false
+      personName: '个人中心'
     }
+  },
+  created () {
+    // let data = {}
+    // getCardish(data).then(res => {
+    //   console.log(res)
+    // })
   },
   mounted () {
     let customerId = window.localStorage.getItem('accountId')
     if (customerId) {
+      console.log(customerId)
       this.notLogin = false
       getUserInfo(customerId).then(res => {
-        this.personName = res.data.customerName
+        if (res.code === 0) {
+          this.personName = res.data.customerName
+        } else {
+          this.$message({
+            message: res.msg,
+            type: 'warning',
+            center: true,
+            duration: 1500
+          })
+        }
       })
     } else {
       this.isLogin = true
@@ -125,8 +121,10 @@ export default {
           center: true,
           duration: 1000
         })
-        this.notLogin = true
-        this.$router.push({path: '/'})
+        setTimeout(() => {
+          this.notLogin = true
+          this.$router.push({path: '/home'})
+        }, 1000)
       })
     },
     toIndex () {
@@ -167,6 +165,7 @@ export default {
         duration: 1000
       })
     },
+    // 去登录
     login () {
       this.isLogin = true
     },
@@ -178,10 +177,14 @@ export default {
 </script>
 
 <style scoped>
- .nav{
-  width: 100%;
-  height: 65px;
+.all{
+  width:100%;
   background-color: #ffe300;
+}
+ .nav{
+  width: 1200px;
+  height: 65px;
+  /* background-color: #ffe300; */
   margin: 0 auto;
   text-align: center;
   position: relative;
@@ -196,16 +199,12 @@ export default {
   position:absolute;
   top: 50%;
   margin-top: -25px;
-  left:10%;
+  left:4.5%;
 }
 .nav ul{
-  /* display: flex; */
-  /* position: absolute; */
   width:730px;
-  height: 80px;
-  /* right: 5% */
   float: right;
-  margin-right:68px;
+  margin-right:-20px;
 }
 .nav ul li{
   padding: 0 5px;
@@ -227,7 +226,7 @@ export default {
   color:#333
 }
 .el-dropdown span{
-  font-size: 20px;
+  font-size: 13px;
   color:#333;
   /* font-weight: 600 */
 }
@@ -239,39 +238,5 @@ export default {
  text-align: center;
  border-radius: 50%;
  background: #ccc;
-}
-.car{
-  width:30px;
-  height:80px;
-  line-height: 80px;
-  position: absolute;
-  right:50px;
-  cursor: pointer;
-}
-.car img{
-  width:30px;
-  height: 30px;
-}
-.car span{
-   display: inline-block;
-   width:20px;
-   height: 20px;
-   line-height: 20px;
-   text-align: center;
-   border-radius: 50%;
-   background: red;
-   color:#fff;
-   font-size: 10px;
-   position: absolute;
-   right:-5px;
-   top:11px
-}
-.edition{
-  width:100%;
-  height: 50px;
-  line-height: 50px;
-  background: rgb(66, 66, 66);
-  text-align: left;
-  padding-left: 20px;
 }
 </style>

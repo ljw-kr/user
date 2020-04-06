@@ -21,6 +21,18 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #333;
+  background-color: #f4f4f4 !important;
+}
+@media screen and (max-width: 1200px) {
+  body{
+    width: 1200px;
+  }
+}
+@media screen and (min-width: 1920px) {
+  body{
+    width: 1920px;
+    margin: 0 auto
+  }
 }
 li{
   list-style: none;
@@ -59,6 +71,9 @@ button:active{
 .el-radio__input.is-checked+.el-radio__label{
    color:#e6a23c !important
 }
+.el-radio__inner:hover{
+   border-color:#ffe300 !important;
+}
 .el-button--primary{
    background-color:#f4f4f4 !important;
    border:none;
@@ -81,8 +96,11 @@ input:focus{
   border:1px solid #DCDFE6 !important;
 }
 .el-dialog__header{
-  text-align: left !important;
-  border-bottom: 1px solid #ccc
+  /* text-align: left !important; */
+  /* border-bottom: 1px solid #ccc */
+  background: #ffe300;
+  height: 35px;
+  /* line-height: 40px; */
 }
 textarea:focus{
   border:1px solid #DCDFE6 !important;
@@ -104,5 +122,61 @@ textarea:focus{
 }
 .el-message--success .el-message__content{
   color:#E6A23C
+}
+.el-slider__runway{
+  margin:10px 0;
+  cursor: none;
+}
+.el-slider__runway:hover{
+  cursor: auto;
+}
+.el-slider__button{
+  border-color:#ffe300;
+  width:12px;
+  height: 12px;
+}
+.el-slider__bar{
+  background-color: #ffe300;
+}
+.el-checkbox__inner{
+  border-color: #ffe300;
+  /* background-color: #ffe330; */
+}
+.el-checkbox__inner:hover{
+  border-color: #ffe300;
+}
+.el-checkbox__input.is-focus .el-checkbox__inner{
+  border-color: #ffe300 !important;
+}
+.el-checkbox__label{
+  color: rgba(0, 0, 0) !important
+}
+.el-checkbox__input.is-checked .el-checkbox__inner, .el-checkbox__input.is-indeterminate .el-checkbox__inner{
+  background-color: #ffe330;
+  border-color: #ffe300;
+}
+.el-switch__label.is-active{
+  color:#ffc526
+}
+.el-rate__icon{
+  font-size: 16px;
+  margin-right: 0;
+}
+.el-rate__text{
+  margin-left: 5px;
+}
+.info .el-rate {
+  margin-left:15px
+}
+.searchTop .el-input__inner {
+  height: 32px !important;
+  line-height: 32px !important;
+}
+/* swipper */
+.swiper-slide-active,.swiper-slide-next,.swiper-slide-prev{
+  width:200px !important
+}
+.swiper-slide{
+  width:200px !important
 }
 </style>

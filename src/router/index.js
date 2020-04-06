@@ -5,6 +5,7 @@ import index from '@/components/index'
 import description from '../components/description'
 import results from '../components/results'
 import person from '../components/person.vue'
+import pay from '../components/pay.vue'
 Vue.use(Router)
 
 const router = new Router({
@@ -13,9 +14,17 @@ const router = new Router({
     {
       path: '/',
       name: 'index',
+      redirect: '/home',
+      meta: {
+        title: '风味到家'
+      }
+    },
+    {
+      path: '/home',
+      name: 'index',
       component: index,
       meta: {
-        title: '大厨到家'
+        title: '风味到家'
       }
     },
     {
@@ -49,6 +58,14 @@ const router = new Router({
       meta: {
         title: '用户个人中心'
       }
+    },
+    {
+      path: '/payOrder',
+      name: 'payOrder',
+      component: r => require.ensure([], () => r(pay, '提交订单')),
+      meta: {
+        title: '提交订单'
+      }
     }
   ]
 })
@@ -62,5 +79,8 @@ router.beforeEach((to, from, next) => {
     document.title = to.meta.title
   }
   next()
+})
+router.afterEach((to, from, next) => {
+  window.scrollTo(0, 0)
 })
 export default router

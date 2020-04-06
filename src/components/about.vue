@@ -1,14 +1,19 @@
 <template>
-  <div>
-      <div class="aboutText">
-        <el-input v-model="txt" placeholder="请输入宁得疑惑"></el-input>
+  <div class="about">
+      <commonTop></commonTop>
+      <div class="center">
+          6666
       </div>
+      <commonBottom></commonBottom>
   </div>
 </template>
 
 <script>
+import commonTop from '@/components/commonTop'
+import commonBottom from '@/components/commonBottom'
 export default {
   name: 'about',
+  components: {commonTop, commonBottom},
   data () {
     return {
       txt: ''
@@ -17,10 +22,17 @@ export default {
 }
 </script>
 
-<style>
-.aboutText{
-  height: 500px;
-  width: 1200px;
-  background-color: #000;
+<style scoped>
+.about{
+  width: 100%;
+}
+.center{
+  width: 80%;
+  height:800px;
+  margin: 0 auto;
+  border:1px solid #ccc;
+  border-top: none;
+  border-radius: 5px;
+  background: #fff;
 }
 </style>

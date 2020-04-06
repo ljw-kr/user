@@ -1,6 +1,6 @@
 <template>
   <div class="login">
-    <el-dialog :visible.sync="dialogVisible" width="700px" :close-on-click-modal="false" :before-close="handleClose">
+    <el-dialog :visible.sync="dialogVisible" width="700px" :close-on-click-modal="false" :before-close="handleClose" :title="loginTitle" center>
       <el-tabs v-model="activeName" v-if="toLogin === 0" class="tab" >
         <el-tab-pane label="账号登录" name="first">
             <div class="play">
@@ -103,7 +103,8 @@ export default {
       toLogin: 0,
       isreSms: false, // 是否已点击获取验证码,注册
       foSms: '', // 忘记密码验证码
-      isfoSms: false // 是否已点击获取验证码,忘记密码
+      isfoSms: false, // 是否已点击获取验证码,忘记密码
+      loginTitle: '用户登录'
     }
   },
   watch: {
@@ -187,6 +188,7 @@ export default {
       this.toLogin = 1
       this.loginName = ''
       this.loginPassword = ''
+      this.loginTitle = '用户注册'
     },
     // 回到登录界面
     backLogin () {
@@ -197,10 +199,10 @@ export default {
       this.registerName = ''
       this.newPoster = ''
       this.newPassword = ''
+      this.loginTitle = '用户登录'
     },
     // 点击修改密码
     modifyPsd () {
-      console.log('忘记密码')
       let data = {mail: this.newPoster, password: this.newPassword, code: this.foSms}
       changePsd(data).then(res => {
         console.log(res)
@@ -403,8 +405,6 @@ export default {
 
 <style scoped>
 .login {
-  /* width: 600px;
-  height: 500px; */
   background: #fff;
   margin: 0 auto;
   border-radius: 5px;
@@ -416,7 +416,7 @@ export default {
   height: 25px;
   line-height: 25px;
   font-size: 14px;
-  padding: 5px 10px;
+  padding: 2px 3px;
   border-radius: 5px;
   background:lightgray;
   display: inline-block;
@@ -434,7 +434,6 @@ export default {
     cursor:pointer;
     margin-top: 10px;
     margin-left: 50px;
-    /* clear:both */
 }
 #v_container {
  width: auto;
