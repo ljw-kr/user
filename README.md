@@ -8,6 +8,13 @@
 # install dependencies
 npm install
 
+# install other dependencies
+npm install -S element-ui
+npm install axios
+npm install vue-axios
+npm install element-china-area-data
+maybe others,you can find it when you open the projects,and then install it
+
 # serve with hot reload at localhost:8080
 npm run dev
 
