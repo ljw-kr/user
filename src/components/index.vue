@@ -6,30 +6,24 @@
         <p class='des'>私人厨师将世界带入你的盘子</p>
         <p class='note'>使用风味到家总能让您享受到家的味道</p>
         <div class='search'>
-          <el-select v-model='type' filterable placeholder='选择烹饪'>
+          <el-select v-model='style' filterable placeholder='选择菜品类型'>
             <el-option
-              v-for='item in options'
+              v-for='item in styleOptions'
               :key='item.value'
               :label='item.label'
-              :value='item.value'
+              :value='item.label'
             ></el-option>
           </el-select>
-          <el-select
-            v-model='city'
-            filterable
-            placeholder='城市'
-            class='second'
-          >
-            <el-option
-              v-for='item in options2'
-              :key='item.value'
-              :label='item.label'
-              :value='item.value'
-            ></el-option>
-          </el-select>
-          <div class='block'>
-           <el-date-picker v-model='datetime' type='date' placeholder='日期'></el-date-picker>
-          </div>
+          <!-- 选择城市 -->
+         <el-cascader
+            size="middle"
+            :options="cityOptions"
+            v-model="address"
+            :placeholder="address"
+            @change="selectCity"
+            class="second"
+          ></el-cascader>
+
           <el-button type='warning' class='btn1' @click="searchChiefs">找到你的厨师</el-button>
         </div>
       </div>
@@ -52,7 +46,8 @@
 import commonTop from '@/components/commonTop'
 import chiefCard from '@/components/chiefCard'
 import commonBottom from '@/components/commonBottom'
-import {pushChef, getCatogery, getOrderInfo, searchChief} from '@/api/user'
+import {pushChef, getCatogery, searchChief} from '@/api/user'
+import { CodeToText, provinceAndCityData } from 'element-china-area-data' // 引入
 import BMap from 'BMap'
 export default {
   name: 'HelloWorld',
@@ -64,7 +59,10 @@ export default {
       page: '',
       size: '',
       datetime: '',
-      city: '',
+      chefspeciality: '',
+      address: '请选择城市',
+      styleOptions: [],
+      typeOptions: [],
       options: [
         {
           value: '选项1',
@@ -99,28 +97,8 @@ export default {
           label: '徽菜'
         }
       ],
-      options2: [
-        {
-          value: '选项1',
-          label: '广州'
-        },
-        {
-          value: '选项5',
-          label: '北京'
-        },
-        {
-          value: '选项2',
-          label: '上海'
-        },
-        {
-          value: '选项3',
-          label: '深圳'
-        },
-        {
-          value: '选项4',
-          label: '杭州'
-        }
-      ],
+      cityOptions: provinceAndCityData,
+      style: '',
       type: '',
       recommends: [],
       customerId: '',
@@ -132,17 +110,20 @@ export default {
   created () {
     getCatogery().then(res => {
       if (res.code === 0) {
-        let options = []
         res.data.forEach(item => {
           let option = {}
           if (item.categoryType < 200) {
             option.label = item.categoryName
             option.value = item.categoryType
-            options.push(option)
+            this.styleOptions.push(option)
+            option = null
+          } else {
+            option.label = item.categoryName
+            option.value = item.categoryType
+            this.typeOptions.push(option)
             option = null
           }
         })
-        this.options = options
       }
     })
     // 百度地图API功能
@@ -173,13 +154,6 @@ export default {
   },
   mounted () {
     this.customerId = window.localStorage.getItem('accountId')
-    let info = {}
-    info.customerId = this.customerId
-    info.page = ''
-    info.size = ''
-    getOrderInfo(info).then(res => {
-      console.log(res)
-    })
     let data = {}
     data.chefprovince = this.chefprovince
     data.chefcity = this.chefcity
@@ -189,7 +163,7 @@ export default {
     dom.addEventListener('scroll', function () {
       let totalPage = that.totalpages
       const scrollDistance = dom.scrollHeight - dom.scrollTop - dom.clientHeight
-      console.log(scrollDistance)
+      // console.log(scrollDistance)
       if (scrollDistance === 0) { // 等于0证明已经到底，可以请求接口
         if (that.currentPage < totalPage) { // 当前页数小于总页数就请求
           document.getElementsByClassName('loading')[0].style.display = 'block'
@@ -220,13 +194,13 @@ export default {
       var geolocation = new BMap.Geolocation()
       const that = this
       geolocation.getCurrentPosition(function (r) {
-        // console.log(this)
         if (this.getStatus() === 0) {
           var gc = new BMap.Geocoder()
           gc.getLocation(r.point, function (rs) {
             console.log(rs) // 有时候定位不准确
             that.chefprovince = rs.addressComponents.province
             that.chefcity = that.city = rs.addressComponents.city
+            that.address = rs.addressComponents.province + '/' + rs.addressComponents.city
           })
         } else {
           alert('failed' + this.getStatus())
@@ -245,46 +219,43 @@ export default {
         })
       }
     },
+    // 选择城市
+    selectCity (values) {
+      this.chefprovince = CodeToText[values[0]]
+      this.chefcity = CodeToText[values[1]]
+      this.address = CodeToText[values[0]] + CodeToText[values[1]]
+      console.log(this.address)
+    },
+    // 搜索厨师
     searchChiefs () {
       if (this.customerId) {
-        // this.$router.push({path: '/results'}).catch(data => {})
         let data = {}
-        data.chefprovince = ''
-        data.chefcity = ''
-        data.page = 4
-        data.size = 5
-        pushChef(data).then(res => {
-          console.log(res)
+        data.chefname = this.chefname || ''
+        data.cheflevel = this.cheflevel || ''
+        data.chefname = this.chefname || ''
+        data.chefstatus = this.chefstatus || ''
+        data.chefprovince = this.chefprovince || ''
+        data.chefcity = this.chefcity || ''
+        data.chefcounty = this.chefcounty || ''
+        this.chefspeciality = this.type + this.style
+        data.chefspeciality = this.style || ''
+        data.lowcost = this.lowcost || ''
+        data.highcost = this.highcost || ''
+        data.page = this.page || ''
+        data.size = this.size || ''
+        searchChief(data).then(res => {
           if (res.code === 0) {
-            this.$router.replace({ name: 'results', params: {chefs: res.data, position: this.city} })
+            console.log(res)
+            this.$router.replace({ name: 'results', params: {chefs: res.data, province: this.chefprovince, city: this.chefcity, chefNumber: res.totalsize, dataPages: res.totalpages, speciality: this.style} })
+          } else {
+            this.$message({
+              message: res.msg,
+              type: 'warning',
+              center: true
+            })
           }
         })
-
-        // let data = {}
-        // data.chefname = this.chefname || ''
-        // data.cheflevel = this.cheflevel || ''
-        // data.chefname = this.chefname || ''
-        // data.chefstatus = this.chefstatus || ''
-        // data.chefprovince = this.chefprovince || ''
-        // data.chefcity = this.chefcity || ''
-        // data.chefcounty = this.chefcounty || ''
-        // data.chefspeciality = this.chefspeciality || ''
-        // data.lowcost = this.lowcost || ''
-        // data.highcost = this.highcost || ''
-        // data.page = this.page || 0
-        // data.size = this.size || 10
-        // searchChief(data).then(res => {
-        //   if (res.code === 0) {
-        //     console.log(res)
-        //   } else {
-        //     this.$message({
-        //       message: res.msg,
-        //       type: 'warning',
-        //       center: true
-        //     })
-        //   }
-        // })
-        // console.log(data)
+        console.log(data)
       } else {
         this.$message({
           message: '请您先登录网站！',
@@ -317,7 +288,6 @@ export default {
 .all::-webkit-scrollbar {
   width: 0;
 }
-
 .main {
   width: 100%;
   height: auto;
@@ -352,7 +322,7 @@ export default {
 }
 .top_info .search {
   display: flex;
-  width: 900px;
+  width: 800px;
   margin: 0 auto;
   margin-top: 60px;
 }
@@ -362,22 +332,19 @@ export default {
 .el-select .el-input .el-input__inner {
   height: 50px !important;
 }
-.search .block {
-  margin-left: 500px;
-}
 .search .second {
-  margin-left: 250px;
+  margin-right: 80px;
 }
 .el-select {
-  position: absolute;
+  margin-right: 80px;
 }
 .search .btn1 {
-  margin-left: 50px;
+  margin-left: 10px;
 }
 .bigInfo {
   width: 100%;
   height: auto;
-  background: lightgray;
+  /* background: lightgray; */
   margin: 0 auto;
   padding-top: 20px;
   padding-bottom: 20px;
@@ -392,6 +359,13 @@ export default {
   flex-wrap: wrap;
   overflow-y:scroll;
   padding-bottom: 25px;
+}
+.cfInfo{
+     /*隐藏滚动条，当IE下溢出，仍然可以滚动*/
+      -ms-overflow-style:none;
+      /*火狐下隐藏滚动条*/
+      /* overflow:-moz-scrollbars-none !important;  这个在火狐下无效 */
+      scrollbar-width: none;
 }
 .bigInfo .title {
   width: 100%;

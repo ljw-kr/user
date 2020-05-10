@@ -64,26 +64,29 @@
             <div class="right">
               <p>{{this.chefInfo.chefName}}</p>
               <p>{{this.chefInfo.chefSlogan?this.chefInfo.chefSlogan:'一个热爱美食的普通人'}}</p>
-              <el-button type="warning" @click="boxVisible=true">发私信</el-button>
+              <el-button type="warning" @click="openSocket">发私信</el-button>
               <el-dialog
-                title="写私信"
+                :title="this.chefInfo.chefName"
                 :visible.sync="boxVisible"
-                width="40%"
+                width="700px"
+                top="3vh"
                 :close-on-click-modal="false"
               >
                 <div class="box">
-                  <el-input placeholder="henry666" :readonly="true"></el-input>
-                  <div style="margin: 20px 0;"></div>
+                  <!-- <el-input :placeholder="this.chefInfo.chefName" :readonly="true"></el-input> -->
+                  <div id="messageBox">
+                    <p style="fontSize:14px;textAlign:center">{{this.messageTime}}</p>
+                  </div>
                   <el-input
                     type="textarea"
-                    :rows="5"
+                    :rows="4"
                     placeholder="请输入内容"
                     v-model="msgContent"
                     maxlength="300"
                     show-word-limit
                   ></el-input>
                   <div style="marginTop: 40px">
-                    <el-button type="warning" class="btn" @click="sendMessage">确认</el-button>
+                    <el-button type="warning" class="btn" @click="sendMessage">发送</el-button>
                     <el-button type="primary" class="btn" @click="boxVisible=false">取消</el-button>
                   </div>
                 </div>
@@ -92,7 +95,7 @@
           </div>
           <div
             class="desci"
-          >虽然我是一名业余的厨师，但是十分热爱厨师这门手艺，我希望用我的双手做出好吃的食物，为更多人服务。火候不到不出品，味道不正不出品，份量不够不出品，装盘不美不出品！</div>
+          >{{this.chefInfo.chefIntroduce}}</div>
         </div>
       </div>
       <div class="center">
@@ -110,6 +113,7 @@
             </li>
           </div>
         </ul>
+        <p style="position:absolute; bottom:5px;left:585px">{{this.nowCount}} / {{this.allCount}}</p>
       </div>
       <div class="comment">
         <p>{{this.chefInfo.chefName}}的评论区</p>
@@ -124,9 +128,16 @@
                 <el-rate v-model="item.evaluateScore" disabled show-score text-color="#ff9900"></el-rate>
               </span>
               <p>{{item.evaluateContent}}</p>
+              <div >
+                <img :src="icon" @click="magnify(icon)" v-for="(icon, index) in item.evaluateImage" :key="index" class="comment_image">
+              </div>
               <span class="name">已消费：{{item.dishName}}</span>
             </div>
           </div>
+            <div class="late_img">
+              <i class="el-icon-circle-close close" @click="setImg"></i>
+             <img :src="this.laterImg" alt="">
+            </div>
         </div>
         <div
           style="width:100%;height:300px;lineHeight:300px;fontSize:22px;textAlign:center"
@@ -152,7 +163,9 @@ import {
   modifyCardish,
   deleteCardish,
   getCategoryType,
-  getChefComments
+  getChefComments,
+  getUserInfo,
+  getOrderDetail
 } from '@/api/user'
 import {formatDate2} from '@/utils/format'
 export default {
@@ -160,34 +173,14 @@ export default {
   components: { commonTop, chiefMenu, commonBottom },
   data () {
     return {
+      customer: '', // 私信中己方名字
+      msgIcon: '', // 私信中己方头像
+      msgIcon2: '', // 私信中厨师头像
       boxVisible: false,
       chefRate: 4.5,
-      chefComments: [
-        {
-          name: '爱学习的居然',
-          icon: require('../assets/2.jpg'),
-          evaluateScore: 4.5,
-          evaluateContent: '好像跟这位厨师学做菜啊！ 业余里面也有大师！',
-          dishName: '玫瑰山药',
-          createTime: formatDate2(new Date(1585751827 * 1000))
-        },
-        {
-          name: '双门洞扫地僧',
-          icon: require('../assets/ml.jpg'),
-          evaluateScore: 5,
-          evaluateContent: '味道棒极了,从来没吃过这么好吃的私房菜，真的太棒了，离下一次下单不会太远的！！！味道棒极了,从来没吃过这么好吃的私房菜，真的太棒了，离下一次下单不会太远的！！',
-          dishName: '新奥尔良鸡腿',
-          createTime: formatDate2(new Date(1585753253 * 1000))
-        },
-        {
-          name: '不想长大的狗焕',
-          icon: require('../assets/1.jpg'),
-          evaluateScore: 4.2,
-          evaluateContent: '最开始没抱多少期待，虽然那几年前就开始有这种服务了。抱着猎奇的心态下了一次单，这次的厨师大叔厨艺不错，值得点赞！',
-          dishName: '香肠披萨',
-          createTime: formatDate2(new Date(1585755637 * 1000))
-        }
-      ],
+      chefComments: [],
+      nowCount: 0,
+      allCount: 0,
       msgContent: '',
       chefInfo: {},
       menus: [],
@@ -199,7 +192,10 @@ export default {
       totalMoney: 0,
       num: 1,
       cart: [],
-      carCount: 0
+      carCount: 0,
+      laterImg: '',
+      socket: null,
+      messageTime: formatDate2(new Date())
     }
   },
   created () {
@@ -216,6 +212,8 @@ export default {
           })
           this.menus.push(item)
         })
+        this.nowCount = 1
+        this.allCount = this.menus.length
       } else {
         this.$message({
           message: res.msg,
@@ -228,6 +226,7 @@ export default {
     getChiefInfo(this.chefId).then(res => {
       if (res.code === 0) {
         this.chefInfo = res.data
+        this.msgIcon2 = res.data.chefIcon
       } else {
         this.$message({
           message: res.msg,
@@ -271,11 +270,35 @@ export default {
       }
       data = null
     })
-  },
-  mounted () {
     getChefComments(this.chefId).then(res => {
       if (res.code === 0) {
-        this.chefComments = res.data
+        res.data.forEach(item => {
+          getUserInfo(item.customerId).then(res => {
+            item.icon = res.data.customerIcon
+            item.name = res.data.customerName
+          })
+          let info = {}
+          info.customerId = item.customerId
+          info.orderId = item.orderId
+          item.dishName = ''
+          getOrderDetail(info).then(result => {
+            result.data.orderDetailList.forEach(ele => {
+              item.dishName += ele.dishName
+            })
+            info = null
+          })
+          item.createTime = formatDate2(new Date(item.createTime * 1000))
+          this.chefComments.push(item)
+        })
+        console.log(this.chefComments)
+      }
+    })
+  },
+  mounted () {
+    getUserInfo(this.customerId).then(res => {
+      if (res.code === 0) {
+        this.customer = res.data.customerName
+        this.msgIcon = res.data.customerIcon
       }
     })
   },
@@ -284,17 +307,128 @@ export default {
     backHome () {
       this.$router.push({ path: '/' })
     },
+    // 打开socket
+    openSocket () {
+      this.boxVisible = true
+      if (typeof (WebSocket) === 'undefined') {
+        console.log('您的浏览器不支持WebSocket')
+      } else {
+        console.log('您的浏览器支持WebSocket')
+        const that = this
+        // 实现化WebSocket对象，指定要连接的服务器地址与端口  建立连接
+        var socketUrl = 'ws://193.112.183.246:8888/fwdj/imserver/' + this.customerId
+        // socketUrl = socketUrl.replace('https', 'ws').replace('http', 'ws')
+        console.log(socketUrl)
+        if (this.socket != null) {
+          this.socket.close()
+          this.socket = null
+        }
+        this.socket = new WebSocket(socketUrl)
+        // 打开事件
+        this.socket.onopen = function () {
+          console.log('websocket已打开')
+        }
+        // 接收消息
+        this.socket.onmessage = function (msg) {
+          console.log(msg.data)
+          if (msg.data === '连接成功') {
+            that.insertMessage2('你好呀，' + that.customer)
+          } else {
+            let content = JSON.parse(msg.data)
+            that.insertMessage2(content.msgContent)
+          }
+        }
+      }
+    },
     // 发送消息
     sendMessage () {
-      setTimeout(() => {
-        this.$message({
-          message: '消息发送成功',
-          type: 'success',
-          center: true,
-          duration: 1000
-        })
-        this.boxVisible = !this.boxVisible
-      }, 500)
+      if (typeof (WebSocket) === 'undefined') {
+        console.log('您的浏览器不支持WebSocket')
+      } else {
+        console.log('您的浏览器支持WebSocket')
+        if (this.msgContent === '') {
+          this.$message({
+            message: '不能发送空白消息',
+            type: 'warning',
+            center: true,
+            duration: 1000
+          })
+        } else {
+          let data = {}
+          data.toUserId = this.chefId
+          data.msgContent = this.msgContent
+          // data.fromUserId = this.customerId
+          data = JSON.stringify(data)
+          console.log('已发送：' + data)
+          this.socket.send(data)
+          this.insertMessage1(this.msgContent)
+          this.msgContent = ''
+          this.$message({
+            message: '消息发送成功',
+            type: 'success',
+            center: true,
+            duration: 1000
+          })
+        }
+      }
+    },
+    // 消息插入
+    insertMessage1 (value) {
+      let box = document.getElementById('messageBox')
+      let div = document.createElement('div')
+      let user = document.createElement('p')
+      let img = document.createElement('img')
+      div.style.clear = 'both'
+      div.style.float = 'right'
+      div.style.margin = '4px 0'
+      user.innerText = value
+      user.style.backgroundColor = '#eee'
+      user.style.display = 'inline-block'
+      user.style.maxWidth = '150px'
+      user.style.padding = '8px 13px'
+      user.style.borderRadius = '8px 6px 6px 2px'
+      user.style.margin = '3px 5px'
+      user.style.fontSize = '12px'
+      user.style.fontFamily = 'Microsoft YaHei'
+      user.style.letterSpacing = '1px'
+      div.appendChild(user)
+      img.src = this.msgIcon
+      img.style.width = '35px'
+      img.style.height = '35px'
+      img.style.borderRadius = '50%'
+      img.style.objectFit = 'cover'
+      img.style.verticalAlign = 'top'
+      div.appendChild(img)
+      box.appendChild(div)
+    },
+    // 对方回复消息插入
+    insertMessage2 (value) {
+      let box = document.getElementById('messageBox')
+      let div = document.createElement('div')
+      let user = document.createElement('p')
+      let img = document.createElement('img')
+      img.src = this.msgIcon2
+      img.style.width = '35px'
+      img.style.height = '35px'
+      img.style.borderRadius = '50%'
+      img.style.objectFit = 'cover'
+      img.style.verticalAlign = 'top'
+      div.appendChild(img)
+      div.style.clear = 'both'
+      div.style.float = 'left'
+      div.style.margin = '4px 0'
+      user.innerText = value
+      user.style.backgroundColor = '#eee'
+      user.style.display = 'inline-block'
+      user.style.maxWidth = '150px'
+      user.style.padding = '8px 13px'
+      user.style.borderRadius = '8px 6px 6px 2px'
+      user.style.margin = '3px 5px'
+      user.style.fontSize = '12px'
+      user.style.fontFamily = 'Microsoft YaHei'
+      user.style.letterSpacing = '1px'
+      div.appendChild(user)
+      box.appendChild(div)
     },
     // 收藏厨师
     chefCollect (index) {
@@ -430,7 +564,7 @@ export default {
     },
     // 立即结算
     toPay () {
-      this.$router.replace({
+      this.$router.push({
         name: 'payOrder',
         params: {
           data: this.cart,
@@ -442,25 +576,39 @@ export default {
     },
     // 向左滚动
     toLeft () {
-      let $d = document.getElementsByClassName('container')[0]
-      let left = parseInt($d.style.left) || 0
-      $d.style.left = left - 200 + 'px'
-      this.menus.push(this.menus[0])
-      this.menus.splice(0, 1)
-      left = parseInt($d.style.left) || 0
-      $d.style.left = left + 200 + 'px'
+      if (this.allCount) {
+        let $d = document.getElementsByClassName('container')[0]
+        let left = parseInt($d.style.left) || 0
+        $d.style.left = left - 200 + 'px'
+        this.menus.push(this.menus[0])
+        this.nowCount === 1 ? this.nowCount = this.allCount : this.nowCount--
+        this.menus.splice(0, 1)
+        left = parseInt($d.style.left) || 0
+        $d.style.left = left + 200 + 'px'
+      }
     },
     // 向右滚动
     toRight () {
-      console.log('666')
-      let $d = document.getElementsByClassName('container')[0]
-      let left = parseInt($d.style.left) || 0
-      $d.style.left = left + 200 + 'px'
-      let dd = this.menus.length - 1
-      this.menus.unshift(this.menus[dd])
-      this.menus.pop()
-      left = parseInt($d.style.left) || 0
-      $d.style.left = left - 200 + 'px'
+      if (this.allCount) {
+        let $d = document.getElementsByClassName('container')[0]
+        let left = parseInt($d.style.left) || 0
+        $d.style.left = left + 200 + 'px'
+        this.nowCount === this.allCount ? this.nowCount = 1 : this.nowCount++
+        let dd = this.menus.length - 1
+        this.menus.unshift(this.menus[dd])
+        this.menus.pop()
+        left = parseInt($d.style.left) || 0
+        $d.style.left = left - 200 + 'px'
+      }
+    },
+    // 图片放大
+    magnify (url) {
+      this.laterImg = url
+      document.getElementsByClassName('late_img')[0].style.display = 'block'
+    },
+    setImg () {
+      this.laterImg = ''
+      document.getElementsByClassName('late_img')[0].style.display = 'none'
     }
   }
 }
@@ -501,14 +649,15 @@ export default {
 }
 .desci {
   width: 300px;
-  height: 100%;
+  height: 125px;
   text-indent: 30px;
   text-align: left;
   color: rgba(0, 0, 0, 0.6);
   font-size: 16px;
   word-break: break-all;
   margin-right: 6%;
-  padding-top: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis !important;
 }
 .left {
   width: 130px;
@@ -548,6 +697,7 @@ export default {
   padding-top: 15px;
   background: #fff;
   clear: both;
+  position: relative;
   overflow: hidden;
 }
 .title {
@@ -559,36 +709,6 @@ export default {
   margin-top: 15px;
   margin-bottom: 10px;
 }
-/* .swiper-slide {
-  text-align: center;
-  font-size: 18px;
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: -webkit-flex;
-  display: flex;
-  -webkit-box-pack: center;
-  -ms-flex-pack: center;
-  -webkit-justify-content: center;
-  justify-content: center;
-  -webkit-box-align: center;
-  -ms-flex-align: center;
-  -webkit-align-items: center;
-  align-items: center;
-}
-.swiper-container {
-  width: 1075px !important;
-  --swiper-navigation-color: black;
-  text-align: center;
-}
-.swiper-pagination {
-  top: 340px;
-}
-.swiper-button-prev {
-  left: 0;
-}
-.swiper-button-next {
-  right: 0;
-} */
 .btn {
   width: 100px;
 }
@@ -810,9 +930,11 @@ export default {
   right: 10px;
 }
 .comment_man {
-  display: flex;
-  flex-direction: column;
-  padding: 2px 0 0 10px;
+  /* display: flex; */
+  /* flex-direction: column; */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 0 5px 10px;
   font-size: 14px;
 }
 .personal p:nth-of-type(1) {
@@ -824,13 +946,13 @@ export default {
 .personal .name{
   font-size: 10px;
   background: #bbb;
-  display: inline-block;
+  /* display: inline-block; */
   color:#fff;
   text-align: left;
-  width:120px;
+  width:auto;
   height:15px;
   line-height: 15px;
-  padding: 1px 0 1px 5px;
+  padding: 3px 10px 3px 5px;
   border-radius: 5px;
 }
 /* 图片轮播样式 */
@@ -881,5 +1003,55 @@ export default {
   overflow: hidden !important;
   position: absolute;
   left: 0;
+}
+.comment_image{
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+  margin-right: 8px;
+  margin-bottom: 5px;
+  object-fit: cover;
+}
+.content{
+  position: relative;
+}
+.late_img {
+  position: absolute;
+  width:100%;
+  height: 100%;
+  top:-150px;
+  left:250px;
+  z-index:1000;
+  display: none;
+}
+.late_img img {
+  width:600px;
+  height: 400px;
+  object-fit: cover;
+}
+.late_img .close{
+  position: absolute;
+  top:-16px;
+  left: 583px;
+  font-size: 30px;
+  cursor:pointer;
+  z-index:2002
+}
+#messageBox{
+  margin: 20px auto;
+  margin-top: 5px;
+  height:300px;
+  overflow-y:scroll;
+  text-align: left;
+}
+#messageBox::-webkit-scrollbar{
+  width:3px
+}
+#messageBox{
+  /*隐藏滚动条，当IE下溢出，仍然可以滚动*/
+      -ms-overflow-style:none;
+      /*火狐下隐藏滚动条*/
+      /* overflow:-moz-scrollbars-none !important;  这个在火狐下无效 */
+      scrollbar-width: none;
 }
 </style>

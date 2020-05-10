@@ -1,48 +1,105 @@
 <template>
   <div class="all">
     <p class="title">
-      <span>{{this.data.orderTime}}&nbsp;&nbsp;&nbsp;</span>
+      <span>{{this.data.createTime}}&nbsp;&nbsp;&nbsp;</span>
       <span>订单号:&nbsp;</span>
       <span>{{this.data.orderId}}</span>
     </p>
     <div class="text_wrap">
-      <img :src="this.data.foodImg" alt class="img" />
+      <img :src="this.data.orderDetailList[0].dishIcon" alt class="img" />
       <div class="text">
         <p>
           菜品：
-          <span>{{this.data.foodName}}</span>
+          <span
+            v-for="(item, index) in this.data.orderDetailList"
+            :key="index"
+          >/{{item.dishName}}</span>
         </p>
         <p>
           上门地址：
-          <span>{{this.data.address}}</span>
+          <span>{{this.data.customerAddress}}</span>
         </p>
         <p>
           上门时间：
-          <span>{{this.data.time}}</span>
+          <span>{{this.data.orderTime}}</span>
         </p>
       </div>
       <div class="price">
-        <p>总额: {{this.data.money}}</p>
-        <p>{{this.data.payWay}}</p>
+        <p>总额: {{this.data.orderAmount}}</p>
+        <p>{{this.data.payWay?this.data.payWay:'在线支付'}}</p>
       </div>
       <div class="state">
-        <p>{{this.data.state===-1?'已取消':(this.data.state===0?'待支付':(this.data.state===1?'待评论':'已完成'))}}</p>
-        <p>订单详情</p>
+        <p>{{this.data.orderStatus===-1?'已取消':(this.data.orderStatus===0?'待支付':(this.data.orderStatus===1?'待确认':(this.data.orderStatus===2)?'待评论':'已完成'))}}</p>
+        <p @click="toOrderDes" class="state_des">订单详情</p>
+        <el-dialog
+          title="订单详情"
+          :visible.sync="orderVisible"
+          width="700px"
+          top="5vh"
+          center
+          :close-on-click-modal="false"
+        >
+          <div class="detail">
+            <p>订单状态：{{this.data.orderStatus===-1?'已取消':(this.data.orderStatus===0?'待支付':(this.data.orderStatus===1?'待确认':(this.data.orderStatus===2)?'待评论':'已完成'))}}</p>
+            <div class="detail_content">
+              <p @click="toChef" style="paddingBottom:15px">
+                厨师： {{this.detailData.chefName}}&nbsp;
+                <i class="el-icon-arrow-right"></i>
+              </p>
+              <hr />
+              <div
+                v-for="(item, index) in this.detailData.orderDetailList"
+                :key="index"
+                class="dish_content"
+              >
+                <img :src="item.dishIcon" alt class="detailImg" />
+                <span>{{item.dishName}}</span>
+                <span>￥{{item.dishPrice}}&nbsp;&nbsp;x&nbsp;&nbsp;{{item.dishQuantity}}</span>
+              </div>
+              <p style="width:100%;marginTop:10px">备注：&nbsp;{{this.data.orderRemark}}</p>
+              <!-- <hr style="marginTop:15px"> -->
+              <div style="height:50px">
+                <el-button
+                  type="warning"
+                  style="float:right;margin:10px;marginTop:23px"
+                  @click="toChef"
+                >再来一单</el-button>
+              </div>
+            </div>
+          </div>
+        </el-dialog>
       </div>
       <div class="action">
         <el-button
-          type="danger"
+          type="warning"
           class="btn"
-          v-if="this.data.state===1"
+          v-if="this.data.orderStatus===2"
           @click="commentVisible=true"
         >去评论</el-button>
-        <el-button type="danger" class="btn" v-else-if="this.data.state===0">取消</el-button>
-        <el-button type="danger" class="btn" v-else>删除</el-button>
-        <el-button type="warning" class="btn" v-if="this.data.state!=0">再次下单</el-button>
-        <el-button type="warning" class="btn" v-else>去支付</el-button>
+        <el-button type="danger" class="btn" v-else-if="this.data.orderStatus===0" @click="cancel">取消</el-button>
+        <el-button type="warning" class="btn" v-else-if="this.data.orderStatus===1" @click="successOrder">确认完成</el-button>
+        <el-button
+          type="warning"
+          class="btn"
+          v-if="this.data.orderStatus===0"
+          @click="toPayOrder"
+        >去支付</el-button>
+        <el-button
+          type="warning"
+          class="btn"
+          v-else-if="this.data.orderStatus===-1"
+          @click="toChef"
+        >再来一单</el-button>
+        <el-button type="danger" class="btn" v-else-if="this.data.orderStatus===2">删除</el-button>
+        <el-button
+          type="warning"
+          class="btn"
+          v-else-if="this.data.orderStatus===3"
+          @click="toChef"
+        >再来一单</el-button>
       </div>
       <el-dialog
-        title="henry111厨房里的 “玫瑰山药”"
+        :title="this.data.chefName + '的厨房美味'"
         :visible.sync="commentVisible"
         width="700px"
         center
@@ -98,15 +155,19 @@
 </template>
 
 <script>
+import { giveComment, getOrderDetail, cancelOrder, finishOrder } from '@/api/user'
 export default {
   name: 'allorder',
   props: ['data'],
   data () {
     return {
+      defaultImg: require('../assets/rose.jpg'),
       foodName: '',
       address: '',
       time: '',
       commentVisible: false,
+      orderVisible: false,
+      detailData: {},
       text:
         '亲，来评价下这名厨师为您服务的用餐体验吧，可以从厨师的服务态度，做工手艺，菜品的美味程度等方面描述哦~',
       commentRate: 0,
@@ -114,10 +175,107 @@ export default {
       afterImg: []
     }
   },
+  created () {
+    console.log(this.data)
+  },
   methods: {
+    // 获取评论分数
     getRate (value) {
       console.log(value)
       this.commentRate = value
+    },
+    // 确认完成订单
+    successOrder () {
+      let data = {}
+      data.customerId = this.data.customerId
+      data.orderId = this.data.orderId
+      finishOrder(data).then(res => {
+        if (res.code === 43) {
+          this.$message({
+            message: res.msg,
+            type: 'scuuess',
+            center: true,
+            duration: 1500
+          })
+          this.$nextTick(() => {
+            this.data.orderStatus = 2
+          })
+        } else {
+          this.$message({
+            message: res.msg,
+            type: 'warning',
+            center: true,
+            duration: 1500
+          })
+        }
+      })
+    },
+    // 去支付
+    toPayOrder () {
+
+    },
+    // 订单详情
+    toOrderDes () {
+      let info = {}
+      info.orderId = this.data.orderId
+      info.customerId = this.data.customerId
+      console.log(info)
+      getOrderDetail(info).then(res => {
+        console.log(res)
+        if (res.code === 0) {
+          console.log(res)
+          this.detailData = res.data
+          this.orderVisible = true
+        } else {
+          this.$message({
+            message: res.msg,
+            type: 'warning',
+            center: true
+          })
+        }
+      })
+    },
+    // 取消订单
+    cancel () {
+      let data = {}
+      data.customerId = this.data.customerId
+      data.orderId = this.data.orderId
+      this.$confirm(
+        '提示',
+        '确认要取消该订单？',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+        .then(() => {
+          cancelOrder(data).then(res => {
+            if (res.code === 43) {
+              console.log(res)
+              this.$message({
+                message: res.msg,
+                type: 'success',
+                center: true,
+                duration: 1000
+              })
+            } else {
+              this.$message({
+                message: res.msg,
+                type: 'warning',
+                center: true,
+                duration: 1000
+              })
+            }
+          })
+        })
+        .catch(() => {})
+    },
+    // 前往厨师界面
+    toChef () {
+      this.$router
+        .push({ path: '/des', query: { chefId: this.data.chefId } })
+        .catch(data => {})
     },
     upload () {
       if (this.afterImg.length >= 5) {
@@ -219,18 +377,44 @@ export default {
       }
     },
     // 删除待上传的图片
-    deleteImg (index) {
-      this.afterImg.splice(index, 1)
+    deleteImg(index) {
+      this.afterImg.splice(index, 1);
     },
-    submitComment () {
-      let data = {}
-      data.orderId = '24524524524524524524'
-      data.evaluateScore = this.commentRate
-      data.evaluateContent = this.commentText
-      data.customerId = localStorage.getItem('accountId')
-      data.imgs = this.afterImg
-      console.log(data)
-    //   this.commentVisible = false
+    // 提交评论
+    submitComment() {
+      let data = {};
+      data.orderId = this.data.orderId;
+      data.evaluateScore = this.commentRate;
+      data.evaluateContent = this.commentText;
+      data.customerId = this.data.customerId
+      data.imgs = ''
+      if (this.afterImg.length !== 0) {
+        this.afterImg.forEach(item => {
+         data.imgs += item + '##'
+        })
+      }
+      console.log(data);
+      giveComment(data).then(res => {
+        if (res.code === 0) {
+          this.$nextTick(() => {
+            this.data.orderStatus = 3
+          })
+           this.$message({
+            message: '评论成功',
+            type: "success",
+            center: true,
+            duration: 1000
+          });
+          this.commentVisible = false
+        } else {
+          this.$message({
+            message: res.msg,
+            type: "warning",
+            center: true,
+            duration: 1000
+          });
+        }
+      });
     }
   }
 };
@@ -305,12 +489,14 @@ export default {
   margin: 0 auto;
   margin-top: 10px;
 }
-.state p:nth-of-type(2) {
+.state .state_des {
   width: 90px;
   margin: 0 auto;
   border-top: 1px solid #ccc;
   padding-top: 5px;
   margin-top: 5px;
+  cursor: pointer;
+  color: #ffe300;
 }
 .action {
   width: 200px;
@@ -356,6 +542,34 @@ export default {
   top: 8px;
   display: none;
   color: #fff;
-font-size: 20px;
+  font-size: 20px;
+}
+.detail {
+  text-align: left !important;
+}
+.detail p {
+  text-align: left !important;
+  width: 100%;
+}
+.detailImg {
+  width: 100px;
+  height: 80px;
+  border-radius: 5px;
+  object-fit: cover;
+  vertical-align: middle;
+}
+.dish_content {
+  width: 100%;
+  display: flex;
+  padding-left: 45px;
+  padding-top: 15px;
+}
+.dish_content span {
+  display: inline-block;
+  width: 100px;
+  text-align: center;
+  margin-left: 100px;
+  height: 80px;
+  line-height: 80px;
 }
 </style>

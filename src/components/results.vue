@@ -4,8 +4,6 @@
     <div class="result">
       <div class="searchTop">
         <div id="bdMap">
-          <!-- <i class="el-icon-location"></i> -->
-          <!-- <span>{{this.position}}</span> -->
           <el-cascader
             size="middle"
             :options="cityOptions"
@@ -19,20 +17,17 @@
           <el-input v-model="chefName"></el-input>
           <el-button type="warning" size="small" @click="searchOneDish">找菜品</el-button>
           <el-input v-model="dishName" width="50px"></el-input>
-          <span>可用</span>
-          <el-date-picker v-model="date"></el-date-picker>
         </div>
       </div>
       <div class="filter1" v-if="isChef">
         <span>厨师等级：</span>
         <div class="rank">
           <div class="imgs">
-            <img src="../assets/middle.gif" alt />
-            <span @click="selectLevel">业余</span>
-            <img src="../assets/low.gif" alt />
-            <span @click="selectLevel">初级</span>
-            <img src="../assets/upper.gif" alt />
-            <span @click="selectLevel">资深</span>
+             <el-cascader
+                v-model="rank"
+                :options="rankOptions"
+                @change="selectRank"
+              ></el-cascader>
           </div>
         </div>
         <div class="coin">
@@ -50,19 +45,19 @@
               v-model="foodPrice"
               range
               show-stops
-              :min="10"
-              :max="100"
+              :min="50"
+              :max="400"
               :step="10"
               @change="changePrice"
             ></el-slider>
           </div>
         </div>
         <div class="selectButton">
-          <el-button type="warning" size="small">清除筛选</el-button>
-          <el-button type="warning" size="small">高级筛选</el-button>
+          <el-button type="warning" size="small" @click="searchAgain">清除筛选</el-button>
+          <el-button type="warning" size="small" @click="selectDeep">高级筛选</el-button>
         </div>
       </div>
-      <div class="dish_price" v-else>
+      <!-- <div class="dish_price" v-else>
         <p>价格范围</p>
         <span>{{this.priceRange}}￥/人</span>
         <div class="slideRange2">
@@ -70,8 +65,8 @@
             v-model="foodPrice"
             range
             show-stops
-            :min="10"
-            :max="100"
+            :min="30"
+            :max="200"
             :step="10"
             @change="changePrice"
           ></el-slider>
@@ -80,7 +75,7 @@
           <el-button type="warning" size="small">清除筛选</el-button>
           <el-button type="warning" size="small">高级筛选</el-button>
         </div>
-      </div>
+      </div> -->
       <div class="filter2" v-if="isChef">
         <div class="title">
           <span>特色</span>
@@ -91,11 +86,11 @@
         </div>
         <div class="selectBox">
           <el-checkbox-group v-model="checkedFoods" @change="handleCheckedFoodsChange">
-            <el-checkbox v-for="(food, index) in foodOptions" :label="food" :key="index">{{food}}</el-checkbox>
+            <el-checkbox v-for="(food, index) in styleOptions" :label="food" :key="index">{{food}}</el-checkbox>
           </el-checkbox-group>
         </div>
       </div>
-      <div class="dish_style" v-else>
+      <!-- <div class="dish_style" v-else>
         <p>菜品风格</p>
         <div class="selectBox">
           <el-checkbox-group v-model="checkedStyles" @change="handleCheckedStylesChange">
@@ -106,7 +101,7 @@
             >{{style}}</el-checkbox>
           </el-checkbox-group>
         </div>
-      </div>
+      </div> -->
       <div class="language" v-if="isChef">
         <span>语种选择：</span>
         <div>
@@ -117,14 +112,14 @@
           </el-radio-group>
         </div>
       </div>
-      <div class="dish_type" v-else>
+      <!-- <div class="dish_type" v-else>
         <p>菜品类型</p>
         <div class="selectBox">
           <el-checkbox-group v-model="checkedTypes" @change="handleCheckedTypeChange">
             <el-checkbox v-for="(type, index) in typeOptions" :label="type" :key="index">{{type}}</el-checkbox>
           </el-checkbox-group>
         </div>
-      </div>
+      </div> -->
       <div class="reserve" v-if="isChef">
         <span>收取定金：</span>
         <div>
@@ -135,9 +130,8 @@
           </el-radio-group>
         </div>
       </div>
-      <div class="searchResult">
-        <p class="reTitle" v-if="isChef">搜索结果：共为您搜索到 {{this.count}} 位优质厨师</p>
-        <p class="reTitle" v-else>搜索结果：共为您搜索到 {{this.count}} 份美味菜品</p>
+      <div class="searchResult" v-if="isChef">
+        <p class="reTitle">搜索结果：共为您搜索到 {{this.count}} 位优质厨师</p>
         <div class="chief_list">
           <chiefCard
             v-for="(item,index) in chefs"
@@ -145,6 +139,18 @@
             @click.native="toDes(item.chefId)"
             :chefInfo="item"
           ></chiefCard>
+        </div>
+        <div class="loading"><i class="el-icon-loading" v-if="load"></i><span style="fontSize:20px" v-else>已经到底啦~</span></div>
+      </div>
+      <div class="searchResult" v-else>
+        <p class="reTitle">搜索结果：共为您搜索到 {{this.count}} 份美味菜品</p>
+         <div class="chief_list">
+          <dish
+            v-for="(item,index) in dishes"
+            :key="index"
+            :dishMenu="item"
+            @click.native="toDes(item.chefId)"
+          ></dish>
         </div>
       </div>
     </div>
@@ -156,6 +162,7 @@
 import commonTop from '@/components/commonTop'
 import commonBottom from '@/components/commonBottom'
 import chiefCard from '@/components/chiefCard'
+import dish from '@/components/dish'
 import { searchChief, searchFood } from '@/api/user'
 import { CodeToText, provinceAndCityData } from 'element-china-area-data' // 引入
 // provinceAndCityData ： 省市二级数据，得到数组
@@ -164,7 +171,7 @@ import { CodeToText, provinceAndCityData } from 'element-china-area-data' // 引
 // TextToCode：方法, TextToCode['北京'] 得到地域码
 export default {
   name: 'result',
-  components: { commonTop, chiefCard, commonBottom },
+  components: { commonTop, chiefCard, commonBottom, dish },
   data () {
     return {
       position: '',
@@ -173,12 +180,56 @@ export default {
       chefName: '',
       chefprovince: '',
       chefcity: '',
+      chefspeciality: '',
       dishName: '',
       date: '',
       price: '',
-      cRank: '',
-      foodPrice: [35, 100],
-      priceRange: '35-100',
+      foodPrice: [50, 400],
+      priceRange: '50-400',
+      rank: '',
+      rankOptions: [
+        {
+          value: '业余',
+          label: '业余',
+          children: [
+            {
+              value: '家庭能手',
+              label: '家庭能手'
+            },
+            {
+              value: '厨师达人',
+              label: '厨师达人'
+            },
+            {
+              value: '专家',
+              label: '专家'
+            }
+          ]
+        },
+        {
+          value: '专业',
+          label: '专业',
+          children: [
+            {
+              value: '一级',
+              label: '一级'
+            },
+            {
+              value: '二级',
+              label: '二级'
+            },
+            {
+              value: '三级',
+              label: '三级'
+            },
+            {
+              value: '四级',
+              label: '四级'
+            }
+          ]
+        }
+
+      ],
       foodOptions: [
         '早餐/午餐',
         '甜点/糕点',
@@ -192,6 +243,8 @@ export default {
       styleOptions: [
         '湘菜',
         '粤菜',
+        '潮汕菜',
+        '闽菜',
         '靓火老汤',
         '私房菜',
         '炖品类',
@@ -211,60 +264,96 @@ export default {
       ],
       checkedTypes: ['中国'],
       checkedStyles: ['粤菜'],
-      checkedFoods: ['早餐/午餐'],
+      checkedFoods: [],
       languageRadio: '中文',
       reserveRadio: '适中',
       count: 4,
       chefs: [],
+      dishes: [],
       isChef: true,
-      recommends: [
-        {
-          chefName: '欧阳锋',
-          chefLevel: 4,
-          chefSlogan: '做出你喜欢的食物',
-          chefSpeciality: '法餐',
-          chefCost: 30,
-          chefIcon: require('../assets/ml.jpg'),
-          chefBackground: require('../assets/1.jpg')
-        },
-        {
-          chefName: '天上童姥',
-          chefLevel: 4,
-          chefSlogan: '做出你喜欢的食物',
-          chefSpeciality: '法餐',
-          chefCost: 30,
-          chefIcon: require('../assets/ml.jpg'),
-          chefBackground: require('../assets/1.jpg')
-        },
-        {
-          chefName: '洪七公',
-          chefLevel: 4,
-          chefSlogan: '做出你喜欢的食物',
-          chefSpeciality: '法餐',
-          chefCost: 30,
-          chefIcon: require('../assets/ml.jpg'),
-          chefBackground: require('../assets/1.jpg')
-        },
-        {
-          chefName: '文豪',
-          chefLevel: 4,
-          chefSlogan: '做出你喜欢的食物',
-          chefSpeciality: '法餐',
-          chefCost: 30,
-          chefIcon: require('../assets/ml.jpg'),
-          chefBackground: require('../assets/1.jpg')
-        }
-      ]
+      currentPage: 0,
+      dataPages: '',
+      recommends: [],
+      load: true
     }
   },
   created () {
-    // this.chefs = this.$route.params.chefs
+    this.chefs = this.$route.params.chefs
     console.log(this.chefs)
-    this.count = this.chefs.length || 0
-    this.position = this.$route.params.position
+    this.count = this.$route.params.chefNumber
+    this.dataPages = this.$route.params.dataPages
+    this.chefspeciality = this.$route.params.speciality
+    this.chefprovince = this.$route.params.province
+    this.chefcity = this.$route.params.city
+    this.position = this.$route.params.province + '/' + this.$route.params.city
     console.log(this.position)
   },
-  mounted () {},
+  beforeRouteEnter (to, from, next) {
+    console.log(to, from)
+    if (from.path === '/') {
+      window.location.href = 'http://cshare.com/'
+    } else {
+      next(vm => {
+        // vm.$router.replace({name: to.name, params: to.params})
+      })
+    }
+  },
+  mounted () {
+    let data = {}
+    data.chefname = this.chefname || ''
+    if (this.rank.length > 0) {
+      this.cheflevel = this.rank[0] + ' ' + this.rank[1]
+    }
+    data.cheflevel = this.cheflevel || ''
+    data.chefname = this.chefname || ''
+    data.chefstatus = this.chefstatus || ''
+    data.chefprovince = this.chefprovince || ''
+    data.chefcity = this.chefcity || ''
+    data.chefcounty = this.chefcounty || ''
+    let sp = ''
+    if (this.checkedFoods.length > 0) {
+      this.checkedFoods.forEach(item => {
+        sp += item + ' '
+      })
+    }
+    this.chefspeciality += sp
+    data.chefspeciality = this.chefspeciality.replace(/(\s*$)/g, '')
+    data.lowcost = this.lowcost || ''
+    data.highcost = this.highcost || ''
+    data.page = this.page || ''
+    data.size = this.size || ''
+    const that = this // 因为下文中的this指的是卡片容器，所以全局this要另外指代
+    // 监听厨师卡片容器的滚动
+    let dom = document.getElementsByClassName('chief_list')[0]
+    dom.addEventListener('scroll', function () {
+      let totalPage = that.dataPages
+      const scrollDistance = dom.scrollHeight - dom.scrollTop - dom.clientHeight
+      // console.log(scrollDistance)
+      if (scrollDistance === 0) { // 等于0证明已经到底，可以请求接口
+        if (that.currentPage < totalPage) { // 当前页数小于总页数就请求
+          document.getElementsByClassName('loading')[0].style.display = 'block'
+          that.currentPage++// 当前页数自增
+          data.page = that.currentPage
+          // 请求接口的代码
+          searchChief(data).then(res => {
+            // 将请求回来的数据和当前展示的数据合并在一起
+            if (res.code === 0) {
+              that.chefs = that.chefs.concat(res.data)
+              setTimeout(() => {
+                document.getElementsByClassName('loading')[0].style.display = 'none'
+              }, 2000)
+              // data = null
+            } else {
+              that.load = false
+              setTimeout(() => {
+                document.getElementsByClassName('loading')[0].style.display = 'none'
+              }, 2000)
+            }
+          })
+        }
+      }
+    })
+  },
   watch: {
     reserveRadio: function handle (newval, oldval) {
       console.log(this.reserveRadio)
@@ -284,20 +373,23 @@ export default {
       } else {
         let data = {}
         data.chefname = this.chefName || ''
-        data.cheflevel = this.cheflevel || ''
-        data.chefname = this.chefname || ''
-        data.chefstatus = this.chefstatus || ''
-        data.chefprovince = this.chefprovince || ''
-        data.chefcity = this.chefcity || ''
-        data.chefcounty = this.chefcounty || ''
-        data.chefspeciality = this.chefspeciality || ''
-        data.lowcost = this.lowcost || ''
-        data.highcost = this.highcost || ''
+        data.cheflevel = ''
+        data.chefstatus = ''
+        data.chefprovince = ''
+        data.chefcity = ''
+        data.chefcounty = ''
+        data.chefspeciality = ''
+        data.lowcost = ''
+        data.highcost = ''
         data.page = this.page || 0
         data.size = this.size || 10
+        console.log(data)
         searchChief(data).then(res => {
           if (res.code === 0) {
             console.log(res)
+            this.chefs = res.data
+            this.count = res.data.length
+            data = null
           } else {
             this.$message({
               message: res.msg,
@@ -307,8 +399,6 @@ export default {
             })
           }
         })
-        data = null
-        console.log(data)
       }
     },
     // 查找菜品
@@ -331,10 +421,21 @@ export default {
         data.size = this.size || ''
         data.sorttype = 1
         this.isChef = false
+        console.log(data)
         searchFood(data).then(res => {
           console.log(res)
           if (res.code === 0) {
             this.count = res.data.length
+            this.dishes = res.data
+            // res.data.forEach(item => {
+            //   getCategoryType(item.categoryType).then(res => {
+            //     item.categoryType = res.data.categoryName
+            //   })
+            //   getCategoryType(item.categoryStyle).then(res => {
+            //     item.categoryStyle = res.data.categoryName
+            //   })
+            //   this.dishes.push(item)
+            // })
             data = null
           } else {
             this.$message({
@@ -350,6 +451,56 @@ export default {
     changePrice (e) {
       console.log(e)
       this.priceRange = e[0] + '-' + e[1]
+      this.lowcost = e[0]
+      this.highcost = e[1]
+    },
+    // 厨师等级
+    selectRank (values) {
+      console.log(values)
+    },
+    // 清除筛选
+    searchAgain () {
+      this.chefprovince = this.chefcity = this.chefspeciality = this.lowcost = this.highcost = this.rank = this.position = ''
+    },
+    // 高级筛选
+    selectDeep () {
+      let data = {}
+      data.chefname = this.chefName || ''
+      if (this.rank.length > 0) {
+        this.cheflevel = this.rank[0] + ' ' + this.rank[1]
+      }
+      data.cheflevel = this.cheflevel || ''
+      data.chefstatus = this.chefstatus || ''
+      data.chefprovince = this.chefprovince || ''
+      data.chefcity = this.chefcity || ''
+      data.chefcounty = this.chefcounty || ''
+      this.chefspeciality = ''
+      if (this.checkedFoods.length > 0) {
+        this.checkedFoods.forEach(item => {
+          this.chefspeciality += item + ' '
+        })
+      }
+      data.chefspeciality = this.chefspeciality.replace(/(\s*$)/g, '')
+      data.lowcost = this.lowcost || ''
+      data.highcost = this.highcost || ''
+      data.page = this.page || 0
+      data.size = this.size || 10
+      console.log(data)
+      searchChief(data).then(res => {
+        if (res.code === 0) {
+          console.log(res)
+          this.chefs = res.data
+          this.count = res.data.length
+          data = null
+        } else {
+          this.$message({
+            message: res.msg,
+            type: 'warning',
+            center: true,
+            duration: 1500
+          })
+        }
+      })
     },
     handleCheckedFoodsChange (e) {
       console.log(e)
@@ -369,11 +520,16 @@ export default {
     },
     // 全选
     checkAll () {
-      this.checkedFoods = this.foodOptions
+      this.checkedFoods = this.styleOptions
+      this.styleOptions.forEach(item => {
+        this.chefspeciality += item + ' '
+      })
+      console.log(this.chefspeciality)
     },
     // 全不选
     uncheck () {
       this.checkedFoods = []
+      this.chefspeciality = ''
     },
     // 前往厨师界面
     toDes (id) {
@@ -569,6 +725,8 @@ export default {
 }
 .searchResult {
   width: 100%;
+  height: auto;
+  overflow-y:scroll;
   background: #f4f4f4;
 }
 .reTitle {
@@ -649,5 +807,9 @@ export default {
 .dish_type p {
   margin-bottom: 8px;
   font-size: 16px;
+}
+.loading{
+  font-size: 40px;
+  display: none;
 }
 </style>

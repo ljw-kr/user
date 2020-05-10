@@ -50,7 +50,7 @@
                 <el-row :gutter="20">
                   <el-col :span="5" v-for="(item, index) in foodCollections" :key="index">
                     <el-card :body-style="{ padding: '0px' }">
-                      <img :src="item.dishIcon" class="image"  @click="toDes(item.chefId)"/>
+                      <img :src="item.dishIcon" class="image" @click="toDes(item.chefId)" />
                       <div class="title">
                         <p>{{item.dishName}}</p>
                         <span>{{item.categoryType}}-{{item.categoryStyle}}</span>
@@ -69,10 +69,12 @@
                           />
                         </div>
                       </div>
-                      <div class="userIntro">
+                      <div class="intro_content">
+                       <div class="userIntro">
                         <img :src="item.chefIcon" alt />
                         <span :title="item.chefName">{{item.chefName}}</span>
                         <span :title="item.nativePlace">{{item.nativePlace}}</span>
+                       </div>
                       </div>
                     </el-card>
                   </el-col>
@@ -105,13 +107,10 @@
                         </div>
                       </div>
                     </div>
-                    <div class="content1"  @click="toDes(item.chefId)">
+                    <div class="content1" @click="toDes(item.chefId)">
                       <span>{{item.chefName}}</span>
-                      <span>厨师等级：{{item.chefLevel}}级</span>
+                      <span>厨师等级：{{item.chefLevel}}</span>
                       <span>{{item.chefSlogan?item.chefSlogan:'做出最美味的食物'}}</span>
-                      <!-- <span>烹饪:</span>
-                      <span>{{item.chefSpeciality}}</span> -->
-                      <!-- <div class="price">{{item.chefCost?item.chefCost:'120'}}$/人</div> -->
                     </div>
                   </el-col>
                 </el-row>
@@ -124,20 +123,53 @@
         <div class="user_order" v-else-if="active===3">
           <el-tabs v-model="orderActive">
             <el-tab-pane label="全部订单" name="first">
-              <div class="all_order">
+              <div class="all_order" v-if="this.allData.length!==0">
                 <div v-for="(item, index) in allData" :key="index">
                   <allOrder :data="item"></allOrder>
                 </div>
               </div>
+              <div v-else style="textAlign:center;marginTop:20px">暂无数据</div>
             </el-tab-pane>
             <el-tab-pane label="已完成" name="second">
-              <allOrder :data="overOrder"></allOrder>
+              <div class="over_order" v-if="this.overOrder.length!==0">
+                <div v-for="(item, index) in overOrder" :key="index">
+                  <allOrder :data="item"></allOrder>
+                </div>
+              </div>
+              <div v-else style="textAlign:center;marginTop:20px">暂无数据</div>
             </el-tab-pane>
             <el-tab-pane label="待支付" name="third">
-              <allOrder :data="payOrder"></allOrder>
+              <div class="pay_order" v-if="this.payOrder.length!==0">
+                <div v-for="(item, index) in payOrder" :key="index">
+                  <allOrder :data="item"></allOrder>
+                </div>
+              </div>
+              <div v-else style="textAlign:center;marginTop:20px">暂无数据</div>
             </el-tab-pane>
-            <el-tab-pane label="待评价" name="four">
-              <allOrder :data="commentOrder"></allOrder>
+            <el-tab-pane label="待确认" name="four">
+              <div class="confirm_order" v-if="this.confirmOrder.length!==0">
+                <div v-for="(item, index) in confirmOrder" :key="index">
+                  <allOrder :data="item"></allOrder>
+                </div>
+              </div>
+              <div v-else style="textAlign:center;marginTop:20px">暂无数据</div>
+            </el-tab-pane>
+
+            <el-tab-pane label="待评价" name="five">
+              <div class="comment_order" v-if="this.commentOrder.length!==0">
+                <div v-for="(item, index) in commentOrder" :key="index">
+                  <allOrder :data="item"></allOrder>
+                </div>
+              </div>
+              <div v-else style="textAlign:center;marginTop:20px">暂无数据</div>
+            </el-tab-pane>
+            <el-tab-pane label="已取消" name="six">
+              <div class="comment_order" v-if="this.cancelOrder.length!==0">
+                <div v-for="(item, index) in cancelOrder" :key="index">
+                  <allOrder :data="item"></allOrder>
+                </div>
+              </div>
+              <div v-else style="textAlign:center;marginTop:20px">暂无数据</div>
             </el-tab-pane>
           </el-tabs>
         </div>
@@ -189,7 +221,7 @@
                 </el-dialog>
                 <p style="margin:30px 0 0 20px">基本信息</p>
                 <div class="table_wrap">
-                  <table class="user_table">
+                  <table class="user_table" cellspacing="10">
                     <tbody>
                       <tr>
                         <td>邮箱</td>
@@ -345,7 +377,9 @@ import {
   getChiefInfo,
   unCollectDish,
   getCollectChef,
-  unCollectChief
+  unCollectChief,
+  getOrderInfo,
+  getOrderDetail
 } from '@/api/user'
 import commonTop from '@/components/commonTop'
 import commonBottom from '@/components/commonBottom'
@@ -353,6 +387,7 @@ import allOrder from '@/components/allOrder'
 import chiefCard from '@/components/chiefCard'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
+import { formatDate2 } from '@/utils/format'
 import { CodeToText, regionData } from 'element-china-area-data' // 引入
 // provinceAndCityData ： 省市二级数据，得到数组
 // regionData: 省市区三级数据，得到对象
@@ -393,90 +428,18 @@ export default {
       settingActive: 'first',
       orderActive: 'first',
       favorActive: 'first',
-      allData: [
-        {
-          orderTime: '2020-04-04 21:06:09',
-          orderId: '158623144865',
-          foodImg: require('../assets/rose.jpg'),
-          state: -1,
-          money: 132.00,
-          payWay: '在线支付',
-          foodName: '玫瑰山药',
-          address: ' 河北省秦皇岛市驻马店河口村小石街道777号',
-          time: '2020-04-15 11:30:00'
-        },
-        {
-          orderTime: '2020-04-02 18:23:15',
-          orderId: '158736549821',
-          foodImg: require('../assets/2.jpg'),
-          state: 0,
-          money: 98.00,
-          payWay: '在线支付',
-          foodName: '香肠披萨',
-          address: ' 山西省阳泉市郊区驻马店河口村小石街道777号',
-          time: '2020-04-12 19:00:00'
-        },
-        {
-          orderTime: '2020-03-26 14:45:30',
-          orderId: '158521456486',
-          foodImg: require('../assets/1.jpg'),
-          state: 1,
-          money: 72.00,
-          payWay: '在线支付',
-          foodName: '卤肉饭',
-          address: '广州市大学城广东外语外贸大学南苑12栋',
-          time: '2020-03-27 12:00:00'
-        }
-        // {
-        //   foodImg: require('../assets/ml.jpg'),
-        //   state: 2,
-        //   money: 410.0,
-        //   payWay: '在线支付',
-        //   foodName: '西兰花炒牛肉',
-        //   address: '广州市大学城广东外语外贸大学南苑12栋',
-        //   time: '2020-03-27 11:00:00'
-        // }
-      ],
+      // 全部订单
+      allData: [],
       // 已完成
-      overOrder: {
-        foodImg: require('../assets/ml.jpg'),
-        state: 2,
-        money: 410.0,
-        payWay: '在线支付',
-        foodName: '西兰花炒牛肉',
-        address: '广州市大学城广东外语外贸大学南苑12栋',
-        time: '2020-03-27 11:00:00'
-      },
+      overOrder: [],
       // 待支付
-      payOrder: {
-        foodImg: require('../assets/1.jpg'),
-        state: 0,
-        money: 410.0,
-        payWay: '在线支付',
-        foodName: '西兰花炒牛肉',
-        address: '广州市大学城广东外语外贸大学南苑12栋',
-        time: '2020-03-27 11:00:00'
-      },
+      payOrder: [],
+      // 待确认
+      confirmOrder: [],
       // 待评论
-      commentOrder: {
-        foodImg: require('../assets/2.jpg'),
-        state: 1,
-        money: 220.0,
-        payWay: '在线支付',
-        foodName: '瘦肉炖粉条',
-        address: '广州市大学城广东外语外贸大学南苑12栋',
-        time: '2020-03-27 11:00:00'
-      },
+      commentOrder: [],
       // 已取消
-      cancelOrder: {
-        foodImg: require('../assets/3.jpg'),
-        state: -1,
-        money: 220.0,
-        payWay: '在线支付',
-        foodName: '瘦肉炖粉条',
-        address: '广州市大学城广东外语外贸大学南苑12栋',
-        time: '2020-03-27 11:00:00'
-      },
+      cancelOrder: [],
       nameVisible: false,
       title: '',
       content: '',
@@ -574,6 +537,47 @@ export default {
   mounted () {
     this.active = parseInt(this.$route.query.active)
     this.jobOptions = exJobs()
+    let data = {}
+    data.customerId = this.customerId
+    data.page = ''
+    data.size = ''
+    getOrderInfo(data).then(res => {
+      if (res.code === 0) {
+        console.log(res)
+        res.data.forEach(item => {
+          item.orderTime = formatDate2(new Date(item.orderTime * 1000))
+          item.createTime = formatDate2(new Date(item.createTime * 1000))
+          let info = {}
+          info.customerId = item.customerId
+          info.orderId = item.orderId
+          getOrderDetail(info).then(res => {
+            if (res.code === 0) {
+              console.log(res)
+              item.orderDetailList = res.data.orderDetailList
+              info = null
+            }
+          })
+          if (item.payStatus === 0 && item.orderStatus === 0) {
+            item.orderStatus = 0 // 未支付状态
+            this.payOrder.push(item)
+          } else if (item.orderStatus === 2 && item.payStatus === 0) {
+            item.orderStatus = -1 // 已取消状态
+            this.cancelOrder.push(item)
+          } else if (item.orderStatus === 0 && item.payStatus === 1) {
+            item.orderStatus = 1 // 支付成功待确认完成状态
+            this.confirmOrder.push(item)
+          } else if (item.orderStatus === 1 && item.payStatus === 1) {
+            item.orderStatus = 2 // 待评论完成状态
+            this.commentOrder.push(item)
+          } else {
+            item.orderStatus = 3 // 已评论完成状态
+            this.overOrder.push(item)
+          }
+          this.allData.push(item)
+          data = null
+        })
+      }
+    })
   },
   methods: {
     // 地址
@@ -667,7 +671,9 @@ export default {
     },
     // 前往厨师界面
     toDes (id) {
-      this.$router.push({ path: '/des', query: {chefId: id} }).catch(data => {})
+      this.$router
+        .push({ path: '/des', query: { chefId: id } })
+        .catch(data => {})
     },
     // 加入购物车
     addCart (index) {
@@ -920,7 +926,6 @@ export default {
       let fd = new FormData();
       reader.onload = data => {
         let res = data.target || data.srcElement;
-        console.log(res);
         fd.append("file", file, fileName);
         var xhr = "";
         if (typeof XMLHttpRequest !== "undefined") {
@@ -970,9 +975,7 @@ export default {
             that.result = JSON.parse(result.responseText);
             console.log(that.result);
             that.afterImg = that.result.data.url;
-            // that.avatarImg = that.result.data.url;
             console.log(that.afterImg);
-            // console.log(that.avatarImg);
           }
         });
         xhr.send(fd); // 开始上传
@@ -999,10 +1002,11 @@ export default {
 }
 .center {
   width: 1200px;
-  height: 700px;
+  /* height: 700px; */
   margin-left: 150px;
   margin-top: 15px;
   text-align: left;
+  margin-bottom: 20px;
   /* overflow-x: hidden; */
 }
 .user_left {
@@ -1224,13 +1228,15 @@ export default {
 }
 .user_favorite {
   width: 100%;
-  height: 600px;
+  height: auto;
+  padding-bottom: 10px;
 }
 .user_favorite .image {
   width: 100%;
   height: 120px;
   max-height: 150px;
   object-fit: cover;
+  border-radius: 5px 5px 0 0;
 }
 .user_favorite .descript img {
   width: 20px;
@@ -1254,10 +1260,15 @@ export default {
   font-size: 12px;
   color: #bbb;
 }
+.intro_content{
+  border-radius: 0 0 5px 5px;
+
+}
 .userIntro {
   width: 100%;
   margin: 15px 0;
   margin-left: 10px;
+
 }
 .userIntro img {
   width: 35px;
@@ -1284,7 +1295,8 @@ export default {
 }
 .user_order {
   width: 100%;
-  height: 600px;
+  /* height: 600px; */
+  padding-bottom: 32px;
 }
 .user_order .order_title {
   width: 100%;
@@ -1381,15 +1393,17 @@ export default {
 }
 .top {
   width: 100%;
-  height: 130px;
+  /* height: 120px; */
   text-align: center;
   background: #f4f4f4;
+  border-bottom: 1.5px solid rgba(255,255,255);
 }
 .bg {
   display: inline-block;
-  height: auto;
-  max-width: 100%;
+  width: 100%;
+  height: 120px;
   vertical-align: middle;
+  border-radius: 5px 5px 0 0;
 }
 .info {
   height: 30px;
@@ -1401,8 +1415,8 @@ export default {
   float: right;
   height: 20px;
 }
-.info .rate img{
-  width:30px;
+.info .rate img {
+  width: 30px;
   height: 30px;
   object-fit: cover;
 }
@@ -1421,8 +1435,8 @@ export default {
   top: -50px;
 }
 .info .avatar img {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
 }
 .info .content {
@@ -1433,23 +1447,56 @@ export default {
   background: #f4f4f4;
   padding-bottom: 15px;
 }
- .info.content span {
+.info.content span {
   /* display: inline-block; */
-   margin-top: 10px;
+  margin-top: 10px;
   color: red;
 }
-.content1{
+.content1 {
   display: flex;
   flex-direction: column;
   text-align: center;
   background: #f4f4f4;
-padding-bottom: 15px;
+  padding-bottom: 15px;
+  width: 100%;
+  border-radius: 0 0 5px 5px;
+  margin-bottom: 6px;
 }
-.content1 span{
+.content1 span {
   display: inline-block;
   margin-top: 10px;
+  padding: 0 6px;
+  /*单行文本文末显示省略号 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.content1 span:nth-of-type(1){
-  margin-top: 20px;
+.content1 span:nth-of-type(3) {
+  height: 37px;
+  /*多行文本超出显示省略号，仅支持webkit内核浏览器和大部分移动端浏览器 */
+  overflow: hidden;
+  white-space: inherit;
+  text-overflow: ellipsis;
+  display: -webkit-box; /*将对象作为弹性伸缩盒子模型显示 */
+  -webkit-line-clamp: 2; /*设置或检索伸缩盒对象的子元素的排列方式 */
+  -webkit-box-orient: vertical; /*设置或检索伸缩盒对象的子元素的排列方式 */
+  /*兼容其他浏览器 
+.content1 span:nth-of-type(3) {
+    position:relative;
+    line-height:12.33px;
+    /* 3 times the line-height to show 3 lines
+    height:37px;
+    overflow:hidden;
+}
+p::after {   // IE8需要将::after换成:after
+    content:"...";  // IE6-7不显示content内容，需要另外设置一个标签装内容
+    font-weight:bold;
+    position:absolute;
+    bottom:0;
+    right:0;
+    padding:0 20px 1px 45px;
+    background:url(/newimg88/2014/09/ellipsis_bg.png) repeat-y;  // 用图片代替，可设置透明度，做淡化效果
+}
+*/
 }
 </style>

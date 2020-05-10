@@ -7,7 +7,8 @@
         class="bg"
       />
       <div class="info">
-        <img src="../assets/male.gif" alt class="icon" />
+        <img src="../assets/male.gif" alt class="icon" v-if="this.chefInfo.chefGender==='男'"/>
+        <img src="../assets/female.gif" alt class="icon" v-else/>
         <div class="avatar">
           <img :src="this.chefInfo.chefIcon" alt />
         </div>
@@ -28,6 +29,7 @@
 </template>
 
 <script>
+import {getChiefRates} from '@/api/user'
 export default {
   name: 'chiefCard',
   props: ['chefInfo'],
@@ -38,6 +40,13 @@ export default {
       background: require('../assets/1.jpg'),
       slogan: '做出最特别的食物'
     }
+  },
+  created () {
+    getChiefRates(this.chefInfo.chefId).then(res => {
+      if (res.code === 0) {
+        this.rates = res.data.score
+      }
+    })
   }
 }
 </script>
@@ -58,8 +67,9 @@ export default {
 }
 .bg {
   display: inline-block;
-  height: auto;
-  max-width: 100%;
+  width:250px;
+  height: 140px;
+  object-fit: cover;
   vertical-align: middle;
 }
 .info {
@@ -105,6 +115,9 @@ export default {
 .content span {
   /* display: inline-block; */
   margin-top: 13px;
+  height: 21px;
+  overflow: hidden;
+  text-overflow:ellipsis;
   color: red;
 }
 .content .price {

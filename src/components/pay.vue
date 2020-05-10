@@ -29,13 +29,30 @@
               >+ 新增地址</el-button>
             </p>
             <el-dialog title="新增地址" :visible.sync="addressVisible" width="600px">
-              <div>
-                所在城市
+              <div style="marginBottom:5px">
+                <span style="width:500px;display:block;">用户名</span>
+                <el-input
+                  placeholder="请输入您的用户名"
+                  v-model="newCustomerName"
+                  style="width:500px;display:inline-block;marginTop:5px"
+                ></el-input>
+              </div>
+              <div style="marginBottom:5px">
+                <span>手机号码</span>
+                <el-input
+                  placeholder="请输入您的手机号码"
+                  v-model="newCustomerPhone"
+                  style="width:500px;display:inline-block;marginTop:10px"
+                  type="number"
+                ></el-input>
+              </div>
+              <div style="marginBottom:5px">
+                <span style="display:block;marginBottom:10px">所在城市</span>
                 <el-cascader
                   size="middle"
                   :options="cityOptions"
-                  v-model="selectedCity"
-                  :placeholder="cityAddress"
+                  v-model="newAddress"
+                  :placeholder="this.newAddress"
                   @change="addressChange"
                   :center="true"
                 ></el-cascader>
@@ -44,8 +61,8 @@
                 <span>具体地址</span>
                 <el-input
                   placeholder="请输入您的具体地址"
-                  v-model="detailAddress"
-                  style="width:500px;display:inline-block"
+                  v-model="newDetailadd"
+                  style="width:500px;display:inline-block;marginTop:10px"
                 ></el-input>
               </div>
               <div style="marginTop: 40px" class="confirmBtn">
@@ -56,8 +73,9 @@
             <div class="address">
               <p>
                 {{this.allAddress}}
-                <el-button type="warning" size="small" @click="modifyVisible=true">编辑</el-button>
-                <i class="el-icon-arrow-down arrow_down" @click="showList"></i>
+                <el-button type="warning" size="small" @click="edit(modifyIndex)" class="btn1">编辑</el-button>
+                <el-button type="danger" size="small" @click="deleteAdd(modifyIndex)" class="btn2">删除</el-button>
+                <span class="arrow_down"  @click="showList">更多地址 <i class="el-icon-arrow-down"></i></span>
               </p>
               <ul class="address_list">
                 <li
@@ -67,27 +85,44 @@
                 >{{item.allName}}</li>
               </ul>
               <el-dialog title="修改地址" :visible.sync="modifyVisible" width="600px">
-                <div>
-                  所在城市
-                  <el-cascader
-                    size="middle"
-                    :options="cityOptions"
-                    v-model="selectedCity2"
-                    :placeholder="customerAddress"
-                    @change="changeAddress"
-                    :center="true"
-                  ></el-cascader>
-                </div>
-                <div>
-                  <span>具体地址</span>
-                  <el-input
-                    :placeholder="customerDetailadd"
-                    v-model="detailAddress2"
-                    style="width:500px;display:inline-block"
-                  ></el-input>
-                </div>
+                <div style="marginBottom:5px">
+                <span style="width:500px;display:block;">用户名</span>
+                <el-input
+                  :placeholder="this.modifyCustomerName"
+                  v-model="modifyCustomerName"
+                  style="width:500px;display:inline-block;marginTop:5px"
+                ></el-input>
+              </div>
+              <div style="marginBottom:5px">
+                <span>手机号码</span>
+                <el-input
+                  :placeholder="this.modifyCustomerPhone"
+                  v-model="modifyCustomerPhone"
+                  style="width:500px;display:inline-block;marginTop:10px"
+                  type="number"
+                ></el-input>
+              </div>
+              <div style="marginBottom:5px">
+                <span style="display:block;marginBottom:10px">所在城市</span>
+                <el-cascader
+                  size="middle"
+                  :options="cityOptions"
+                  v-model="modifyAddress"
+                  :placeholder="this.modifyAddress"
+                  @change="changeAddress"
+                  :center="true"
+                ></el-cascader>
+              </div>
+              <div>
+                <span>具体地址</span>
+                <el-input
+                  :placeholder="this.modifyDetailadd"
+                  v-model="modifyDetailadd"
+                  style="width:500px;display:inline-block;marginTop:10px"
+                ></el-input>
+              </div>
                 <div style="marginTop: 40px" class="confirmBtn">
-                  <el-button type="warning" @click="confirmAddress">确认</el-button>
+                  <el-button type="warning" @click="modifyOld(modifyIndex)">确认</el-button>
                   <el-button type="primary" @click="modifyVisible=false">取消</el-button>
                 </div>
               </el-dialog>
@@ -223,37 +258,44 @@ import {
   payfor
 } from '@/api/user'
 import { formatDate2 } from '@/utils/format'
+import { testPhone } from '@/utils/test'
 import { CodeToText, regionData } from 'element-china-area-data' // 引入
 export default {
   name: 'payLoad',
   components: { commonTop, commonBottom },
+  inject: ['reload'],
   data () {
     return {
       customerId: '',
       chefId: '',
       customerName: '',
       allAddress: '',
-      newAddress: '',
+      // 新增地址相关
+      newCustomerName: '',
+      newCustomerPhone: '',
+      newAddress: '请选择',
       newProvince: '',
       newCity: '',
       newCounty: '',
       newDetailadd: '',
+      // 修改地址相关
+      modifyIndex: -1, // 编辑地址索引
+      modifyCustomerName: '',
+      modifyCustomerPhone: '',
+      modifyAddress: '',
       modifyProvince: '',
-      modifyCity: '0',
+      modifyCity: '',
       modifyCounty: '',
+      modifyDetailadd: '',
       customerAddress: '',
       customerDetailadd: '',
       orderRemark: '',
+      orderTime: '',
       addressVisible: false,
       modifyVisible: false,
-      selectedCity: '',
-      selectedCity2: '',
-      editAddress: '',
-      detailAddress: '',
-      detailAddress2: '',
       cityOptions: regionData,
       value1: false,
-      foodStatus: 0,
+      foodStatus: 1,
       payway: '',
       addList: [],
       collapseActive: ['0'],
@@ -265,7 +307,7 @@ export default {
       totalMoney: 207,
       bonusMoney: -5,
       payVisible: false,
-      time: '2020-3-14 20:00:00',
+      time: formatDate2(new Date()),
       timepick: '',
       modifyTime: true
     }
@@ -277,47 +319,79 @@ export default {
     })
     this.customerId = this.$route.params.customerId
     this.chefInfo = this.$route.params.chef
-    getUserInfo(this.customerId).then(res => {
-      if (res.code === 0) {
-        let data = res.data
-        this.customerName = data.customerName
-        this.customerPhone = data.customerPhone
-        this.customerAddress =
+    this.getUser()
+    this.getAddress()
+  },
+  beforeRouteEnter (to, from, next) {
+    console.log(to, from)
+    if (from.path === '/') {
+      window.history.go(-1)
+    } else {
+      next(vm => {
+        // vm.$router.replace({name: to.name, params: to.params})
+      })
+    }
+  },
+  mounted () {},
+  methods: {
+    // 获取用户信息
+    getUser () {
+      getUserInfo(this.customerId).then(res => {
+        if (res.code === 0) {
+          let data = res.data
+          this.customerName = data.customerName
+          this.customerPhone = data.customerPhone
+          this.customerAddress =
           data.customerProvince +
           data.customerCity +
           data.customerCounty +
           data.customerDetailadd
-        this.allAddress =
+          this.allAddress =
           data.customerName +
           ' ' +
           this.customerAddress +
           ' ' +
           data.customerPhone
-        this.cityAddress = data.customerProvince + data.customerCity
-        this.customerDetailadd = data.customerDetailadd
-      }
-    })
-    getAllAddress(this.customerId).then(res => {
-      console.log(res)
-      if (res.code === 0) {
-        let tt = ' '
-        res.data.forEach(item => {
-          item.allName =
-            this.customerName +
+          this.cityAddress = data.customerProvince + data.customerCity
+          this.customerDetailadd = data.customerDetailadd
+        } else {
+          this.$message({
+            message: res.msg,
+            type: 'warning',
+            center: true,
+            duration: 1000
+          })
+        }
+      })
+    },
+    // 获取用户地址
+    getAddress () {
+      getAllAddress(this.customerId).then(res => {
+        if (res.code === 0) {
+          let tt = ' '
+          res.data.forEach(item => {
+            item.allName =
+            item.customerName +
             tt +
             item.customerProvince +
             item.customerCity +
             item.customerCounty +
             item.customerDetailadd +
             tt +
-            this.customerPhone
-          this.addList.push(item)
-        })
-      }
-    })
-  },
-  mounted () {},
-  methods: {
+            item.customerPhone
+            this.addList.push(item)
+          })
+        } else {
+          this.$message({
+            message: res.msg,
+            type: 'warning',
+            center: true,
+            duration: 1000
+          })
+        }
+      })
+    },
+    // 是否购买食材
     dd (value) {
       if (value === true) {
         this.foodStatus = 0
@@ -325,6 +399,7 @@ export default {
         this.foodStatus = 1
       }
     },
+    // 支付方式
     checkWay (index) {
       this.$refs.payway.children[0].classList.remove('active')
       this.$refs.payway.children[1].classList.remove('active')
@@ -344,7 +419,9 @@ export default {
     },
     // 选择服务地址
     selectAdd (index) {
-      console.log(this.addList[index].allName)
+      document.getElementsByClassName('btn1')[0].style.display = 'inline-block'
+      document.getElementsByClassName('btn2')[0].style.display = 'inline-block'
+      this.modifyIndex = index
       this.allAddress = this.addList[index].allName
       document.getElementsByClassName('address_list')[0].style.display = 'none'
     },
@@ -360,33 +437,130 @@ export default {
     // 新增地址变化
     addressChange (values) {
       // 带全部选项的得到的值是一个对象
-      this.cityAddress = '' // 每次选择城市前需要清理掉之前的选择
+      this.newAddress = '' // 每次选择城市前需要清理掉之前的选择
       this.newProvince = CodeToText[values[0]]
       this.newCity = CodeToText[values[1]]
       this.newCounty = CodeToText[values[2]]
       for (let key in values) {
-        this.cityAddress += CodeToText[values[key]]
+        this.newAddress += CodeToText[values[key]]
       }
-      console.log(this.cityAddress)
     },
     // 新增地址
     addAddress () {
+      if (!this.newCustomerName) {
+        this.$message({
+          message: '请输入用户名',
+          type: 'warning',
+          center: true,
+          duration: 1000
+        })
+      } else if (!this.newCustomerPhone) {
+        this.$message({
+          message: '请输入手机号码',
+          type: 'warning',
+          center: true,
+          duration: 1000
+        })
+      } else if (!testPhone(this.newCustomerPhone)) {
+        this.$message({
+          message: '手机号码无效',
+          type: 'warning',
+          center: true,
+          duration: 1000
+        })
+      } else if (!this.newAddress) {
+        this.$message({
+          message: '请选择城市',
+          type: 'warning',
+          center: true,
+          duration: 1000
+        })
+      } else if (!this.newDetailadd) {
+        this.$message({
+          message: '请填写具体地址',
+          type: 'warning',
+          center: true,
+          duration: 1000
+        })
+      } else {
+        let data = {}
+        data.customerId = this.customerId
+        data.customerName = this.newCustomerName
+        data.customerPhone = this.newCustomerPhone
+        data.customerProvince = this.newProvince
+        data.customerCity = this.newCity
+        data.customerCounty = this.newCounty
+        data.customerDetailadd = this.newDetailadd
+        addAddress(data).then(res => {
+          if (res.code === 27) {
+            this.addList = []
+            this.getAddress()
+            this.$message({
+              message: '添加地址成功',
+              type: 'success',
+              center: true,
+              duration: 1000
+            })
+            this.addressVisible = false
+            this.newProvince = this.newCity = this.newCounty = this.newDetailadd =
+            ''
+          } else {
+            this.$message({
+              message: res.msg,
+              type: 'warning',
+              center: true,
+              duration: 1000
+            })
+          }
+        })
+      }
+    },
+    // 修改地址变化
+    changeAddress (values) {
+      // 带全部选项的得到的值是一个对象
+      this.modifyAddress = ''
+      this.modifyProvince = CodeToText[values[0]]
+      this.modifyCity = CodeToText[values[1]]
+      this.modifyCounty = CodeToText[values[2]]
+      for (let key in values) {
+        this.modifyAddress += CodeToText[values[key]]
+      }
+    },
+    // 点击编辑，加载对应地址
+    edit (index) {
+      let address = this.addList[index]
+      this.modifyCustomerName = address.customerName
+      this.modifyCustomerPhone = address.customerPhone
+      this.modifyAddress = address.customerProvince + '/' + address.customerCity + '/' + address.customerCounty
+      this.modifyDetailadd = address.customerDetailadd
+      this.modifyVisible = true
+    },
+    // 修改地址
+    modifyOld (index) {
+      let add = this.addList[index]
       let data = {}
-      data.customerId = this.customerId
-      data.customerProvince = this.newProvince
-      data.customerCity = this.newCity
-      data.customerCounty = this.newCounty
-      data.customerDetailadd = this.detailAddress
-      addAddress(data).then(res => {
+      data.addressId = add.addressId
+      data.customerName = this.modifyCustomerName || add.customerName
+      data.customerPhone = this.modifyCustomerPhone || add.customerPhone
+      data.customerProvince = this.modifyProvince || add.customerProvince
+      data.customerCity = this.modifyCity || add.customerCity
+      data.customerCounty = this.modifyCounty || add.customerCounty
+      data.customerDetailadd = this.modifyDetailadd || add.customerDetailadd
+      modifyAddress(data).then(res => {
         if (res.code === 0) {
+          this.addList = []
+          this.getUser()
+          this.getAddress()
+          document.getElementsByClassName('btn1')[0].style.display = 'none'
+          document.getElementsByClassName('btn2')[0].style.display = 'none'
           this.$message({
-            message: '添加地址成功',
+            message: '修改成功',
             type: 'success',
             center: true,
             duration: 1000
           })
-          this.addressVisible = false
-          this.newProvince = this.newCity = this.newCounty = this.detailAddress =
+          this.modifyVisible = false
+          this.modifyProvince = this.modifyCity = this.modifyCounty = this.modifyDetailadd =
             ''
         } else {
           this.$message({
@@ -398,38 +572,22 @@ export default {
         }
       })
     },
-    // 修改地址变化
-    changeAddress (values) {
-      // 带全部选项的得到的值是一个对象
-      this.editAddress = '' // 每次选择城市前需要清理掉之前的选择
-      this.modifyProvince = CodeToText[values[0]]
-      this.modifyCity = CodeToText[values[1]]
-      this.modifyCounty = CodeToText[values[2]]
-      for (let key in values) {
-        this.editAddress += CodeToText[values[key]]
-      }
-      console.log(this.editAddress)
-    },
-    // 修改地址
-    modifyAddress () {
-      let data = {}
-      data.customerId = this.customerId
-      data.customerProvince = this.modifyProvince
-      data.customerCity = this.modifyCity
-      data.customerCounty = this.modifyCounty
-      data.customerDetailadd = this.detailAddress2
-      console.log(data)
-      modifyAddress(data).then(res => {
-        if (res.code === 0) {
+    // 删除地址
+    deleteAdd (index) {
+      let data = this.addList[index].addressId
+      deleteAddress(data).then(res => {
+        if (res.code === 24) {
+          this.addList = []
+          this.getUser()
+          this.getAddress()
+          document.getElementsByClassName('btn1')[0].style.display = 'none'
+          document.getElementsByClassName('btn2')[0].style.display = 'none'
           this.$message({
-            message: '修改成功',
+            message: '已删除',
             type: 'success',
             center: true,
             duration: 1000
           })
-          this.modifyVisible = false
-          this.modifyProvince = this.modifyCity = this.modifyCounty = this.detailAddress2 =
-            ''
         } else {
           this.$message({
             message: res.msg,
@@ -442,7 +600,6 @@ export default {
     },
     // 提交订单
     toPay () {
-      // this.payVisible = true
       let data = {}
       data.customerId = this.customerId
       data.customerName = this.customerName
@@ -450,10 +607,9 @@ export default {
       data.customerAddress = this.allAddress
       data.chefId = this.chefInfo.chefId
       data.chefName = this.chefInfo.chefName
-      data.orderTime = this.orderTime
-      data.orderRemark = this.orderRemark
+      data.orderTime = this.orderTime || new Date().getTime() / 1000
+      data.orderRemark = this.orderRemark || '无'
       data.foodStatus = this.foodStatus
-      console.log(data)
       submitOrder(data).then(res => {
         if (res.code === 0) {
           this.$message({
@@ -463,8 +619,8 @@ export default {
             duratio: 1000
           })
           console.log(res.data.orderId)
-          let redictUrl = '193.112.183.246:8888/fwdj/pay/create?orderId=' + res.data.orderId + '&returUrl=https://baidu.com'
-          window.location.href(redictUrl)
+          let redictUrl = 'http://193.112.183.246:8888/fwdj/pay/create?orderId=' + res.data.orderId + '&returUrl=https://baidu.com'
+          window.location.href = redictUrl
           // payfor(res.data.orderId).then(res => {
           //   console.log(res)
           //   console.log('付款中')
@@ -479,7 +635,6 @@ export default {
         }
       })
     },
-
     handleClose () {
       this.$confirm(
         '您的订单还未完成支付，请尽快支付。',
@@ -502,16 +657,12 @@ export default {
           this.$router.replace({ path: '/' })
         })
     },
-
+    // 时间格式化
     confirmTime () {
       this.orderTime = this.timepick.getTime() / 1000
       let timePick = formatDate2(this.timepick)
       this.time = timePick
       this.modifyTime = true
-    },
-    confirmAddress () {
-      if (this.modifyCity === '') {
-      }
     }
   }
 }
@@ -599,6 +750,7 @@ p {
 .arrow_down {
   position: absolute;
   right: 110px;
+  font-size: 12px;
 }
 .address_list {
   margin:0;
@@ -814,5 +966,8 @@ p {
 .confirmBtn button {
   margin: 0 20px;
   width: 100px;
+}
+.btn1,.btn2{
+  display: none;
 }
 </style>

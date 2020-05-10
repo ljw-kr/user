@@ -115,6 +115,16 @@ export function getChiefInfo (data) {
     }
   })
 }
+// 获取厨师评分
+export function getChiefRates (data) {
+  return request({
+    url: '/fwdj/chefinfo/score',
+    method: 'get',
+    params: {
+      chefId: data
+    }
+  })
+}
 // 获取某个厨师的所有菜品
 export function getAllDish (data) {
   return request({
@@ -454,6 +464,8 @@ export function addAddress (data) {
     method: 'post',
     params: {
       customerId: data.customerId,
+      customerName: data.customerName,
+      customerPhone: data.customerPhone,
       customerProvince: data.customerProvince,
       customerCity: data.customerCity,
       customerCounty: data.customerCounty,
@@ -468,6 +480,8 @@ export function modifyAddress (data) {
     method: 'post',
     params: {
       addressId: data.addressId,
+      customerName: data.customerName,
+      customerPhone: data.customerPhone,
       customerProvince: data.customerProvince,
       customerCity: data.customerCity,
       customerCounty: data.customerCounty,
@@ -494,6 +508,7 @@ export function giveComment (data) {
       orderId: data.orderId,
       evaluateScore: data.evaluateScore,
       evaluateContent: data.evaluateContent,
+      evaluateImage: data.imgs,
       customerId: data.customerId
     }
   })

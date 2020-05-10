@@ -35,6 +35,7 @@ export default {
   },
   created () {
     this.customerId = window.localStorage.getItem('accountId')
+    console.log(this.chiefMenus)
     getCollectDish(this.customerId).then(res => {
       console.log(res)
       if (res.code === 0) {
@@ -151,7 +152,7 @@ export default {
 }
 .intro{
     width: 100%;
-    height: 40px;
+    height: 47px;
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: break-all;
@@ -161,8 +162,8 @@ export default {
 .type{
   width: 100%;
   height:auto;
-  margin: 13px auto;
-  margin-bottom: 25px;
+  margin: 10px auto;
+  margin-bottom: 20px;
 }
 .mask{
    width: 200px;
